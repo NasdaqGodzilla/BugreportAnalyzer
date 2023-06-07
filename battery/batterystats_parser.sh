@@ -315,3 +315,19 @@ function batterystats_parse_totalpartial_uptimepct() {
     echo -e "$pct"
 }
 
+# Average battery drain rate in pct/hour
+# Input: Batterystats dump
+# Output: (Debug example) batterystats_parse_drainrate: 43 elapsed_time_hour: 59.41 drain_rate: 0.72
+function batterystats_parse_drainrate() {
+    local batterydump="$1"
+    local battery_total_drain=`batterystats_parse_powerdischarge "$batterydump"`
+    local elapsed_time_sec=`batterystats_parse_elapsedtime_sec "$batterydump"`
+
+    local elapsed_time_hour=`echo "scale=2; $elapsed_time_sec/3600" | bc`
+    local drain_rate=$(printf "%.2f" `echo "scale=2; $battery_total_drain/$elapsed_time_hour" | bc`)
+
+    # echo -e "batterystats_parse_drainrate: $battery_total_drain elapsed_time_hour: $elapsed_time_hour drain_rate: $drain_rate"
+
+    echo -e "$drain_rate"
+}
+
