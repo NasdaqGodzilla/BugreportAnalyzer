@@ -12,6 +12,29 @@ function batterystats_getdump() {
     sed -n "$line_start,$line_end{p}" "$dumpfile"
 }
 
+# Input: Batterystats dump
+# Output: Dump of Discharge step durations
+function batterystats_get_powerdischargedump() {
+    local batterydump="$1"
+
+    local line_start=`echo -e "$batterydump" | awk '/^Discharge step durations:/{print NR}'`
+    local line_end=`echo -e "$batterydump" | awk '/^Daily stats:/{print NR}'`
+    let line_start+=1
+    let line_end-=2
+
+    # echo batterystats_parse_powerdischarge LINE_START/END: $line_start/$line_end
+
+    local powerdischarge_dump=`echo -e "$batterydump" | sed -n "$line_start,$line_end{p}"`
+
+    # Remove "Estimated screen off|on time"
+    powerdischarge_dump=`echo -e "$powerdischarge_dump" | sed '/Estimated screen/d'`
+
+    # Remove prefix whitesapce
+    powerdischarge_dump=`echo -e "$powerdischarge_dump" | sed 's/^[ ]*//g'`
+
+    echo -e "$powerdischarge_dump"
+}
+
 : << ExampleOutput
 Total wakes:
   u0a121:    TOTAL wake: 595ms blamed partial, 1s 696ms actual partial, 1s 653ms actual background partial realtime
@@ -88,5 +111,23 @@ function batterystats_parse_totalwake_actualpartial() {
     # echo -e "$all_uids\n$all_packages\n$totalwake_without_pkgname\n$totalwakes"
 
     echo -e "$totalwakes"
+}
+
+# Input: Batterystats dump
+# Output: Total discharge count
+function batterystats_parse_powerdischarge() {
+    local batterydump="$1"
+    local powerdischarge_dump=`batterystats_get_powerdischargedump "$batterydump"`
+
+    # echo -e "$powerdischarge_dump"
+
+    local discharge_step_startlevel=`echo -e "$powerdischarge_dump" | awk '{level=$4}END{print level}'`
+    local discharge_step_endlevel=`echo -e "$powerdischarge_dump" | awk 'NR==1{print $4}'`
+    local discharge_step_discharged=
+    let discharge_step_discharged=discharge_step_startlevel-discharge_step_endlevel
+
+    # echo -e "Discharge step start/end: $discharge_step_startlevel-$discharge_step_endlevel=$discharge_step_discharged"
+
+    echo -e "$discharge_step_discharged"
 }
 
