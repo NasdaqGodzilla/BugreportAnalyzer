@@ -6,6 +6,8 @@
 function zip_bugreport_extract() {
     local path_bugreportzip="$1"
     local path_extract="$2"
+    local path_extract_subpath=`echo -e "$path_bugreportzip" | sed -e 's/\.zip$//g; s/\//_/g'`
+    path_extract="$path_extract/$path_extract_subpath"
     local path_entry="$path_extract/main_entry.txt"
 
     # echo -e "Extracting: $path_bugreportzip to $path_extract"
