@@ -1,6 +1,7 @@
 #!/bin/bash
 
 source package/*
+source alarm/*
 
 function batterystats_getdump() {
     local dumpfile="$1"
@@ -33,6 +34,50 @@ function batterystats_get_powerdischargedump() {
     powerdischarge_dump=`echo -e "$powerdischarge_dump" | sed 's/^[ ]*//g'`
 
     echo -e "$powerdischarge_dump"
+}
+
+# Input: Batterystats dump
+# Output: Dump of Statistics since last charge
+: << ExampleOutput
+Statistics since last charge:
+System starts: 0, currently on battery: false
+Estimated battery capacity: 8000 mAh
+Min learned battery capacity: 7924 mAh
+Max learned battery capacity: 7924 mAh
+Time on battery: 12h 6m 2s 742ms (99.2%) realtime, 12h 6m 2s 739ms (100.0%) uptime
+Time on battery screen off: 12h 1m 0s 283ms (99.3%) realtime, 12h 1m 0s 282ms (99.3%) uptime
+Time on battery screen doze: 0ms (0.0%)
+Total run time: 12h 11m 44s 946ms realtime, 12h 11m 44s 946ms uptime
+Discharge: 3804 mAh
+Screen off discharge: 3645 mAh
+Screen doze discharge: 0 mAh
+Screen on discharge: 158 mAh
+Device light doze discharge: 3328 mAh
+Device deep doze discharge: 0 mAh
+Start clock time: 2023-06-05-21-17-09
+Screen on: 5m 2s 459ms (0.7%) 1x, Interactive: 5m 2s 32ms (0.7%)
+Screen brightnesses:
+dark 36ms (0.0%)
+light 5m 2s 423ms (100.0%)
+Device light idling: 11h 54m 59s 340ms (98.5%) 2x
+Idle mode light time: 11h 32m 14s 918ms (95.3%) 38x -- longest 26m 3s 980ms
+Total full wakelock time: 2s 126ms
+Total partial wakelock time: 11h 58m 0s 620ms
+ExampleOutput
+function batterystats_get_statisticsdump() {
+    local batterydump="$1"
+
+    local line_start=`echo -e "$batterydump" | awk '/^Statistics since last charge:/{print NR}'`
+    local line_end=`echo -e "$batterydump" | awk '/Total partial wakelock time:/{print NR}'`
+
+    # echo batterystats_get_statisticsdump LINE_START/END: $line_start/$line_end
+
+    local battery_statisticsdump=`echo -e "$batterydump" | sed -n "$line_start,$line_end{p}"`
+
+    # Remove prefix whitesapce
+    battery_statisticsdump=`echo -e "$battery_statisticsdump" | sed 's/^[ ]*//g'`
+
+    echo -e "$battery_statisticsdump"
 }
 
 : << ExampleOutput
@@ -129,5 +174,144 @@ function batterystats_parse_powerdischarge() {
     # echo -e "Discharge step start/end: $discharge_step_startlevel-$discharge_step_endlevel=$discharge_step_discharged"
 
     echo -e "$discharge_step_discharged"
+}
+
+# Input: Batterystats dump
+# Output: Elapsed time since boot, like 12h6m2s742ms
+function batterystats_parse_elapsedtime() {
+    local batterydump="$1"
+    local batterystats_dump=`batterystats_get_statisticsdump "$batterydump"`
+
+    # echo -e "$batterystats_dump"
+
+    local time_on_battery_realtime=`echo -e "$batterystats_dump" | \
+        grep "^Time on battery:" | \
+            sed -e 's/^Time on battery: \(.*\) (.*realtime.*/\1/g'
+    `
+
+    # Remove white-space
+    time_on_battery_realtime=`echo -e "$time_on_battery_realtime" | sed -e 's/[ ]//g'`
+
+    echo -e "$time_on_battery_realtime"
+}
+
+# Input: Batterystats dump
+# Output: Uptime since boot, like 12h6m2s739ms
+function batterystats_parse_uptime() {
+    local batterydump="$1"
+    local batterystats_dump=`batterystats_get_statisticsdump "$batterydump"`
+
+    # echo -e "$batterystats_dump"
+
+    local time_on_battery_uptime=`echo -e "$batterystats_dump" | \
+        grep "^Time on battery:" | \
+            sed -e 's/^.*realtime, \(.*\) (.*/\1/g'
+    `
+
+    # Remove white-space
+    time_on_battery_uptime=`echo -e "$time_on_battery_uptime" | sed -e 's/[ ]//g'`
+
+    echo -e "$time_on_battery_uptime"
+}
+
+# See batterystats_parse_elapsedtime, but translate into seconds
+function batterystats_parse_elapsedtime_sec() {
+    local batterydump="$1"
+
+    local elapsed_time_formatted=`batterystats_parse_elapsedtime "$batterydump"`
+    local elapsed_time_sec=`alarm_parse_runtimefield "$elapsed_time_formatted" | awk -F' ' 'END{print $NF}'`
+
+    # echo -e Elapsed: "$elapsed_time_formatted -> $elapsed_time_sec"
+
+    echo -e "$elapsed_time_sec"
+}
+
+# See batterystats_parse_uptime, but translate into seconds
+function batterystats_parse_uptime_sec() {
+    local batterydump="$1"
+
+    local uptime_formatted=`batterystats_parse_uptime "$batterydump"`
+    local uptime_sec=`alarm_parse_runtimefield "$uptime_formatted" | awk -F' ' 'END{print $NF}'`
+
+    # echo -e Uptime: "$uptime_formatted -> $uptime_sec"
+
+    echo -e "$uptime_sec"
+}
+
+# Calculate CPU running percentage
+# Input: Batterystats dump
+# Output: Percentage value, like 25
+function batterystats_parse_runningpct() {
+    local batterydump="$1"
+
+    local elapsed_time_sec=`batterystats_parse_elapsedtime_sec "$batterydump"`
+    local uptime_sec=`batterystats_parse_uptime_sec "$batterydump"`
+    local pct=
+    let pct=uptime_sec*100/elapsed_time_sec
+
+    # echo -e "batterystats_parse_runningpct: uptime_sec/elapsed_time_sec=$uptime_sec/$elapsed_time_sec=$pct"
+
+    echo -e "$pct"
+}
+
+# Input: Batterystats dump
+# Output: Formatted total partial wakelock time, like 
+function batterystats_parse_totalpartial() {
+    local batterydump="$1"
+    local batterystats_dump=`batterystats_get_statisticsdump "$batterydump"`
+
+    # echo -e "$batterystats_dump"
+
+    local time_totalpartial=`echo -e "$batterystats_dump" | \
+        grep "^Total partial wakelock time:" | \
+            awk -F: '{print $2}'
+    `
+
+    # Remove white-space
+    time_totalpartial=`echo -e "$time_totalpartial" | sed -e 's/[ ]//g'`
+
+    echo -e "$time_totalpartial"
+}
+
+# See batterystats_parse_totalpartial, but translate into seconds
+function batterystats_parse_totalpartial_sec() {
+    local batterydump="$1"
+
+    local time_totalpartial=`batterystats_parse_totalpartial "$batterydump"`
+    local total_partial_sec=`alarm_parse_runtimefield "$time_totalpartial" | awk -F' ' 'END{print $NF}'`
+
+    # echo -e Total partial: "$time_totalpartial -> $total_partial_sec"
+
+    echo -e "$total_partial_sec"
+}
+
+# Percentage of total partial to elapsed time
+# Input: Batterystats dump
+function batterystats_parse_totalpartial_elapsedpct() {
+    local batterydump="$1"
+
+    local elapsed_time_sec=`batterystats_parse_elapsedtime_sec "$batterydump"`
+    local totalpartial_sec=`batterystats_parse_totalpartial_sec "$batterydump"`
+    local pct=
+    let pct=totalpartial_sec*100/elapsed_time_sec
+
+    # echo -e "batterystats_parse_totalpartial_elapsedpct: totalpartial_sec/elapsed_time_sec=$totalpartial_sec/$elapsed_time_sec=$pct"
+
+    echo -e "$pct"
+}
+
+# Percentage of total partial to uptime
+# Input: Batterystats dump
+function batterystats_parse_totalpartial_uptimepct() {
+    local batterydump="$1"
+
+    local uptime_sec=`batterystats_parse_uptime_sec "$batterydump"`
+    local totalpartial_sec=`batterystats_parse_totalpartial_sec "$batterydump"`
+    local pct=
+    let pct=totalpartial_sec*100/uptime_sec
+
+    # echo -e "batterystats_parse_totalpartial_uptimepct: totalpartial_sec/uptime_sec=$totalpartial_sec/$uptime_sec=$pct"
+
+    echo -e "$pct"
 }
 
