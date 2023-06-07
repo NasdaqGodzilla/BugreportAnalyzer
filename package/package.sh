@@ -20,8 +20,15 @@ function package_get_uidint() {
 
     # echo package_get_uidint\("$uid_formatted"\): User/App: $userid/$appid
 
+    local systemid=`echo -e "$uid_formatted" | sed s/^u.*/1/g`
     local id=
-    let id=(userid+1)*10000+appid
+    [ "$systemid" == "1" ] && { \
+        let id=(userid+1)*10000+appid
+    } || { \
+        # echo is system uid
+        id=$uid_formatted
+    }
+
     echo $id
 }
 
