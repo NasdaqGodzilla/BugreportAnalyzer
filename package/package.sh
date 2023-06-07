@@ -25,6 +25,23 @@ function package_get_uidint() {
     echo $id
 }
 
+# Input: package summary; Formatted uid, like u0a116
+# Output: Its package name
+function package_get_pkgname() {
+    local pkgsummary="$1"
+    local uid_formatted="$2"
+
+    local uid=`package_get_uidint "$uid_formatted"`
+    local pkgname=`echo -e "$pkgsummary" | grep "$uid" | awk '{print $1}'`
+
+    # echo package_get_pkgname: $uid_formatted/$uid $pkgname
+    echo "$pkgname"
+}
+
+: << ExampleOutput
+  com.sohu.inputmethod.sogouoem 10097 10.1.2303061017
+  com.tencent.android.qqdownloader 10116 8.4.3
+ExampleOutput
 function package_get_pkgsummary() {
     local dump="$1"
 
