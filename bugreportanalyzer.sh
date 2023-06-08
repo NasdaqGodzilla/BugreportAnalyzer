@@ -3,6 +3,7 @@
 export ANALYZER_PATH_BUGREPORT=
 export ANALYZER_PATH_DUMPFILE=
 export ANALYZER_PATH_OUTPUT=output
+export ANALYZER_PATH_TESTCASE='reporter/default.testcase'
 
 export ANALYZER_DUMP_ALARM=
 export ANALYZER_DUMP_BATTERY_DISCHARGED=
@@ -14,6 +15,7 @@ source alarm/*
 source battery/battery_analyzer.sh
 source battery/batterystats_parser.sh
 source package/*
+source reporter/reporter.sh
 source utils/*
 
 ANALYZER_PATH_BUGREPORT="$1"
@@ -108,8 +110,6 @@ debugprint
     unset ANALYZER_DUMP_BATTERY_DISCHARGED
     unset ANALYZER_DUMP_BATTERY_STAT
     unset ANALYZER_DUMP_BATTERY_TOTALWAKE
-
-    battery_analyze_summary
 }
 
 function analyzer_package() {
@@ -143,6 +143,10 @@ analyzer_info
 analyzer_package
 analyzer_alarm
 analyzer_battery
+
+reporter_get_result_full
+
+battery_analyze_summary
 
 analyzer_exit
 
