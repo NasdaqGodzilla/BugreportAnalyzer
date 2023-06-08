@@ -5,11 +5,12 @@ export ANALYZER_PATH_DUMPFILE=
 export ANALYZER_PATH_OUTPUT=output
 
 export ANALYZER_DUMP_ALARM=
-export ANALYZER_DUMP_BATTERY=
+export ANALYZER_DUMP_BATTERY_DISCHARGED=
+export ANALYZER_DUMP_BATTERY_STAT=
 export ANALYZER_DUMP_PACKAGE=
 
 source alarm/*
-source battery/*
+source battery/batterystats_parser.sh
 source package/*
 source utils/*
 
@@ -47,7 +48,8 @@ function analyzer_exit() {
     unset ANALYZER_PATH_DUMPFILE
 
     unset ANALYZER_DUMP_ALARM
-    unset ANALYZER_DUMP_BATTERY
+    unset ANALYZER_DUMP_BATTERY_DISCHARGED
+    unset ANALYZER_DUMP_BATTERY_STAT
     unset ANALYZER_DUMP_PACKAGE
 
     printf "x %.0s" {1..50}
@@ -71,16 +73,26 @@ debugprint
 }
 
 function analyzer_battery() {
-    ANALYZER_DUMP_BATTERY=`batterystats_getdump "$ANALYZER_PATH_DUMPFILE"`
+    ANALYZER_DUMP_BATTERY_DISCHARGED=`batterystats_get_powerdischargedump "$ANALYZER_PATH_DUMPFILE"`
 : << debugprint
-    printf "<BATTERY>\t\t\t%.0s" {1..4}
+    printf "<BATTERY_DISCHARGED>\t\t\t%.0s" {1..4}
     echo
-    echo -e "$ANALYZER_DUMP_BATTERY"
-    printf "<BATTERY>\t\t\t%.0s" {1..4}
+    echo -e "$ANALYZER_DUMP_BATTERY_DISCHARGED"
+    printf "<BATTERY_DISCHARGED>\t\t\t%.0s" {1..4}
     echo
 debugprint
 
-    ANALYZER_DUMP_BATTERY=
+    ANALYZER_DUMP_BATTERY_STAT=`batterystats_get_statisticsdump "$ANALYZER_PATH_DUMPFILE"`
+: << debugprint
+    printf "<BATTERY_STAT>\t\t\t%.0s" {1..4}
+    echo
+    echo -e "$ANALYZER_DUMP_BATTERY_STAT"
+    printf "<BATTERY_STAT>\t\t\t%.0s" {1..4}
+    echo
+debugprint
+
+    unset ANALYZER_DUMP_BATTERY_DISCHARGED
+    unset ANALYZER_DUMP_BATTERY_STAT
 }
 
 function analyzer_package() {
@@ -109,9 +121,9 @@ ANALYZER_PATH_DUMPFILE=`zip_bugreport_extract "$ANALYZER_PATH_BUGREPORT" "$ANALY
 
 analyzer_info
 
+analyzer_package
 analyzer_alarm
 analyzer_battery
-analyzer_package
 
 analyzer_exit
 

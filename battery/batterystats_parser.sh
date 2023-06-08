@@ -13,19 +13,19 @@ function batterystats_getdump() {
     sed -n "$line_start,$line_end{p}" "$dumpfile"
 }
 
-# Input: Batterystats dump
+# Input: Dump file
 # Output: Dump of Discharge step durations
 function batterystats_get_powerdischargedump() {
-    local batterydump="$1"
+    local dumpfile="$1"
 
-    local line_start=`echo -e "$batterydump" | awk '/^Discharge step durations:/{print NR}'`
-    local line_end=`echo -e "$batterydump" | awk '/^Daily stats:/{print NR}'`
+    local line_start=`cat "$dumpfile" | awk '/^Discharge step durations:/{print NR}'`
+    local line_end=`cat "$dumpfile" | awk '/^Daily stats:/{print NR}'`
     let line_start+=1
     let line_end-=2
 
     # echo batterystats_parse_powerdischarge LINE_START/END: $line_start/$line_end
 
-    local powerdischarge_dump=`echo -e "$batterydump" | sed -n "$line_start,$line_end{p}"`
+    local powerdischarge_dump=`sed -n "$line_start,$line_end{p}" "$dumpfile"`
 
     # Remove "Estimated screen off|on time"
     powerdischarge_dump=`echo -e "$powerdischarge_dump" | sed '/Estimated screen/d'`
@@ -36,7 +36,7 @@ function batterystats_get_powerdischargedump() {
     echo -e "$powerdischarge_dump"
 }
 
-# Input: Batterystats dump
+# Input: Dump file
 # Output: Dump of Statistics since last charge
 : << ExampleOutput
 Statistics since last charge:
@@ -65,14 +65,14 @@ Total full wakelock time: 2s 126ms
 Total partial wakelock time: 11h 58m 0s 620ms
 ExampleOutput
 function batterystats_get_statisticsdump() {
-    local batterydump="$1"
+    local dumpfile="$1"
 
-    local line_start=`echo -e "$batterydump" | awk '/^Statistics since last charge:/{print NR}'`
-    local line_end=`echo -e "$batterydump" | awk '/Total partial wakelock time:/{print NR}'`
+    local line_start=`cat "$dumpfile" | awk '/^Statistics since last charge:/{print NR}'`
+    local line_end=`cat "$dumpfile" | awk '/Total partial wakelock time:/{print NR}'`
 
     # echo batterystats_get_statisticsdump LINE_START/END: $line_start/$line_end
 
-    local battery_statisticsdump=`echo -e "$batterydump" | sed -n "$line_start,$line_end{p}"`
+    local battery_statisticsdump=`sed -n "$line_start,$line_end{p}" "$dumpfile"`
 
     # Remove prefix whitesapce
     battery_statisticsdump=`echo -e "$battery_statisticsdump" | sed 's/^[ ]*//g'`
@@ -161,8 +161,7 @@ function batterystats_parse_totalwake_actualpartial() {
 # Input: Batterystats dump
 # Output: Total discharge count
 function batterystats_parse_powerdischarge() {
-    local batterydump="$1"
-    local powerdischarge_dump=`batterystats_get_powerdischargedump "$batterydump"`
+    local powerdischarge_dump="$1"
 
     # echo -e "$powerdischarge_dump"
 
@@ -179,8 +178,7 @@ function batterystats_parse_powerdischarge() {
 # Input: Batterystats dump
 # Output: Elapsed time since boot, like 12h6m2s742ms
 function batterystats_parse_elapsedtime() {
-    local batterydump="$1"
-    local batterystats_dump=`batterystats_get_statisticsdump "$batterydump"`
+    local batterystats_dump="$1"
 
     # echo -e "$batterystats_dump"
 
@@ -198,8 +196,7 @@ function batterystats_parse_elapsedtime() {
 # Input: Batterystats dump
 # Output: Uptime since boot, like 12h6m2s739ms
 function batterystats_parse_uptime() {
-    local batterydump="$1"
-    local batterystats_dump=`batterystats_get_statisticsdump "$batterydump"`
+    local batterystats_dump="$1"
 
     # echo -e "$batterystats_dump"
 
@@ -257,8 +254,7 @@ function batterystats_parse_runningpct() {
 # Input: Batterystats dump
 # Output: Formatted total partial wakelock time, like 
 function batterystats_parse_totalpartial() {
-    local batterydump="$1"
-    local batterystats_dump=`batterystats_get_statisticsdump "$batterydump"`
+    local batterystats_dump="$1"
 
     # echo -e "$batterystats_dump"
 
