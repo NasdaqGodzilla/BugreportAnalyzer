@@ -7,9 +7,11 @@ export ANALYZER_PATH_OUTPUT=output
 export ANALYZER_DUMP_ALARM=
 export ANALYZER_DUMP_BATTERY_DISCHARGED=
 export ANALYZER_DUMP_BATTERY_STAT=
+export ANALYZER_DUMP_BATTERY_TOTALWAKE=
 export ANALYZER_DUMP_PACKAGE=
 
 source alarm/*
+source battery/battery_analyzer.sh
 source battery/batterystats_parser.sh
 source package/*
 source utils/*
@@ -50,6 +52,7 @@ function analyzer_exit() {
     unset ANALYZER_DUMP_ALARM
     unset ANALYZER_DUMP_BATTERY_DISCHARGED
     unset ANALYZER_DUMP_BATTERY_STAT
+    unset ANALYZER_DUMP_BATTERY_TOTALWAKE
     unset ANALYZER_DUMP_PACKAGE
 
     printf "x %.0s" {1..50}
@@ -91,12 +94,28 @@ debugprint
     echo
 debugprint
 
+    ANALYZER_DUMP_BATTERY_TOTALWAKE=`batterystats_parse_get_totalwake_actualpartial_dump "$ANALYZER_PATH_DUMPFILE"`
+: << debugprint
+    printf "<BATTERY_TOTALWAKE>\t\t\t%.0s" {1..4}
+    echo
+    echo -e "$ANALYZER_DUMP_BATTERY_TOTALWAKE"
+    printf "<BATTERY_TOTALWAKE>\t\t\t%.0s" {1..4}
+    echo
+debugprint
+
+    battery_analyze
+
     unset ANALYZER_DUMP_BATTERY_DISCHARGED
     unset ANALYZER_DUMP_BATTERY_STAT
+    unset ANALYZER_DUMP_BATTERY_TOTALWAKE
+
+    battery_analyze_summary
 }
 
 function analyzer_package() {
-    ANALYZER_DUMP_PACKAGE=`package_getdump "$ANALYZER_PATH_DUMPFILE"`
+    local package_dump_full=`package_getdump "$ANALYZER_PATH_DUMPFILE"`
+    ANALYZER_DUMP_PACKAGE=`package_get_pkgsummary "$package_dump_full"`
+    unset package_dump_full
 : << debugprint
     printf "<PACKAGE>\t\t\t%.0s" {1..4}
     echo
@@ -105,7 +124,7 @@ function analyzer_package() {
     echo
 debugprint
 
-    ANALYZER_DUMP_PACKAGE=
+    # unset ANALYZER_DUMP_PACKAGE
 }
 
 [ "$ANALYZER_PATH_BUGREPORT" == "" ] && { \

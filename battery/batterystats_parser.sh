@@ -93,10 +93,10 @@ Total wakes:
   u0a119: 20m 52s 971ms
   u0a121: 1s 696ms
 ExampleOutput
-function batterystats_parse_totalwake_actualpartial_() {
-    local batterystats_raw="$1"
+function batterystats_parse_get_totalwake_actualpartial_dump() {
+    local dumpfile="$1"
 
-    local totalwakes=`echo -e "$batterystats_raw" | tac | \
+    local totalwakes=`cat "$dumpfile" | tac | \
         awk '/TOTAL wake:/{print;flag=1}; flag&&/^  [0-9]+:$/{print;flag=0}; flag&&/^  u[0-9]+a[0-9]+:$/{print;flag=0}' | \
         sed -n 'h;n;G;p' | \
         sed -n 'N;s/\n//;p' | \
@@ -127,11 +127,8 @@ com.alibaba.android.rimet|u0a119|20m52s971ms
 com.tencent.wemeet.app|u0a121|1s696ms
 ExampleOutput
 function batterystats_parse_totalwake_actualpartial() {
-    local batterydump="$1"
-    local packagedump="$2"
-
-    local totalwake_without_pkgname=`batterystats_parse_totalwake_actualpartial_ "$batterydump"`
-    local package_summary=`package_get_pkgsummary "$packagedump"`
+    local totalwake_without_pkgname="$1"
+    local package_summary="$2"
 
     # echo -e "$totalwake_without_pkgname" "$package_summary"
 
@@ -151,7 +148,7 @@ function batterystats_parse_totalwake_actualpartial() {
         totalwakes="$totalwakes\n$pkgname $totalwake_raw"
     done
 
-    totalwakes=`echo -e "$totalwakes" | sed -e 's/[ :]/|/g'`
+    totalwakes=`echo -e "$totalwakes" | sed -e 's/[ :]/|/g;/^$/d'`
 
     # echo -e "$all_uids\n$all_packages\n$totalwake_without_pkgname\n$totalwakes"
 
@@ -315,9 +312,10 @@ function batterystats_parse_totalpartial_uptimepct() {
 # Input: Batterystats dump
 # Output: (Debug example) batterystats_parse_drainrate: 43 elapsed_time_hour: 59.41 drain_rate: 0.72
 function batterystats_parse_drainrate() {
-    local batterydump="$1"
-    local battery_total_drain=`batterystats_parse_powerdischarge "$batterydump"`
-    local elapsed_time_sec=`batterystats_parse_elapsedtime_sec "$batterydump"`
+    local battery_stats_dump="$1"
+    local battery_discharge_dump="$2"
+    local battery_total_drain=`batterystats_parse_powerdischarge "$battery_discharge_dump"`
+    local elapsed_time_sec=`batterystats_parse_elapsedtime_sec "$battery_stats_dump"`
 
     local elapsed_time_hour=`echo "scale=2; $elapsed_time_sec/3600" | bc`
     local drain_rate=$(printf "%.2f" `echo "scale=2; $battery_total_drain/$elapsed_time_hour" | bc`)
