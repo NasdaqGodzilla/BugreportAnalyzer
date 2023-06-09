@@ -117,6 +117,24 @@ function batterystats_parse_get_totalwake_actualpartial_dump() {
     echo -e "$total_actual_partial"
 }
 
+function batterystats_parse_get_batteryhistory_dump() {
+    local dumpfile="$1"
+
+    local line_start=`cat "$dumpfile" | awk '/^Battery History /{print NR}'`
+    local line_end=`cat "$dumpfile" | awk '/^Per-PID Stats:/{print NR}'`
+    let line_start+=1
+    let line_end-=2
+
+    # echo batterystats_parse_get_batteryhistory_dump LINE_START/END: $line_start/$line_end
+
+    local batteryhistory_dump=`sed -n "$line_start,$line_end{p}" "$dumpfile"`
+
+    # Remove prefix whitesapce
+    batteryhistory_dump=`echo -e "$batteryhistory_dump" | sed 's/^[ ]*//g'`
+
+    echo -e "$batteryhistory_dump"
+}
+
 # Input: Batterystats dump; Package dump
 # Output: App total wake
 : << ExampleOutput

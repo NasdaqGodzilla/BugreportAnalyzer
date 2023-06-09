@@ -29,7 +29,24 @@ function battery_analyze() {
     BATTERY_TOTALWAKES=`batterystats_parse_totalwake_actualpartial "$ANALYZER_DUMP_BATTERY_TOTALWAKE" "$ANALYZER_DUMP_PACKAGE"`
 }
 
+# Parse battery history and make summary
+function battery_analyze_batteryhistory_summary() {
+    local dumpfile="$1"
+    # Only time and detail: +12h50m54s334ms +wifi_scan-alarm=u0a124:"*alarm*:com.cctv.yangshipin.app.androidp_KcSdk-Main_action.hb.a.c"
+    local batteryhistory_dump=`batterystats_parse_get_batteryhistory_dump "$dumpfile"`
+    local batteryhistory_dump_alarm=`echo -e "$batteryhistory_dump" | \
+        awk '/alarm=/{printf $1" "; for(i=5; i<=NF; ++i)printf $i;printf "\n"}'`
+    unset batteryhistory_dump
+    local batteryhistory_dump_alarm_formatted=`echo -e "$batteryhistory_dump_alarm" | \
+        sed -e 's/^+//g; s/ [+-]/ & /g; s/:/ /g; s/=/ /g' | xargs printf "  %-20s%-4s%-28s%-16s%s\n"`
+    unset batteryhistory_dump_alarm
+
+    echo -e "$batteryhistory_dump_alarm_formatted"
+}
+
 function battery_analyze_summary() {
+    local dumpfile="$1"
+
     printf "+ %.0s" {1..50} ; echo
 
     printf "%-32s%-2s%s\n" \
@@ -58,6 +75,14 @@ function battery_analyze_summary() {
     printf "[  Total Wake:\n"
     echo -e "Package UID Total" | xargs printf "\t%-48s%-8s%s\n"
     echo -e "$BATTERY_TOTALWAKES" | sed 's/|/\t/g' | xargs printf "\t%-48s%-8s%s\n"
+    printf "]\n"
+
+    local batteryhistory_dump_alarm_formatted=`battery_analyze_batteryhistory_summary "$dumpfile"`
+
+    printf "[  Battery Alarm History:\n"
+    # echo -e "$batteryHistory_dump_alarm"
+    echo -e "Timeline Aquire/Release Type Uid Name" | xargs printf "  %-20s%-4s%-16s%-16s%s\n"
+    echo -e "$batteryhistory_dump_alarm_formatted"
     printf "]\n"
 
     printf "+ %.0s" {1..50} ; echo

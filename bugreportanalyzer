@@ -146,8 +146,8 @@ analyzer_battery
 
 reporter_get_result_full
 
-battery_analyze_summary
 alarm_analyze_summary "$ANALYZER_PATH_DUMPFILE" "$ANALYZER_DUMP_PACKAGE"
+battery_analyze_summary "$ANALYZER_PATH_DUMPFILE"
 
 analyzer_exit
 
