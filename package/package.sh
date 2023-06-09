@@ -80,3 +80,11 @@ function package_get_pkgsummary() {
             ' | tr -s [:space:] | sort
 }
 
+# Get uid via package name
+function package_get_pkguidint () {
+    local pkg_summary="$1"
+    local pkgname="$2"
+
+    echo -e "$pkg_summary" | grep "$pkgname" | awk '{print $2}'
+}
+
