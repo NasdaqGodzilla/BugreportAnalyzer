@@ -16,7 +16,8 @@ source battery/battery_analyzer.sh
 source battery/batterystats_parser.sh
 source package/*
 source reporter/reporter.sh
-source utils/*
+source utils/time_utils.sh
+source utils/zip_utils.sh
 
 ANALYZER_PATH_BUGREPORT="$1"
 shift
