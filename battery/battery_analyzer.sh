@@ -29,19 +29,87 @@ function battery_analyze() {
     BATTERY_TOTALWAKES=`batterystats_parse_totalwake_actualpartial "$ANALYZER_DUMP_BATTERY_TOTALWAKE" "$ANALYZER_DUMP_PACKAGE"`
 }
 
-# Parse battery history and make summary
-function battery_analyze_batteryhistory_summary() {
+# Statistics of battery history item active time
+# Input: Records that have same name
+: << ExampleInput
+  3h36m43s355ms       +   alarm                       1000            *alarm* android.intent.action.DATE_CHANGED
+  3h36m44s340ms       -   alarm                       1000            *alarm* android.intent.action.DATE_CHANGED
+ExampleInput
+# Output: name; total alarm active time in seconds; total alarm counts
+function battery_analyze_batteryhistory_summary_activetime() {
+    local records="$1"
+    local name=`echo -e "$records" | awk 'END{$1="";$2="";$3="";$4="";print $0}' | sed 's/^[ ]*//g; s/[ ]*$//g'`
+    local records_timeonly=`echo -e "$records" | sed 's/^[ ]*//g; s/[ ]*$//g' | awk '{print $1" "$2}'`
+    unset records
+
+: << Output
+*walarm* ScheduleConditionProvider.EVALUATE:
+1h36m43s352ms +
+1h36m43s372ms -
+10h36m43s353ms +
+10h36m43s369ms -
+Output
+    # echo -e "$name:" && echo -e "$records_timeonly"
+
+    local total_activetime=0
+    local total_activecount=0
+    while read record; do
+        local time_formatted=`echo -e "$record" | awk '{print $1}'`
+        local action=`echo -e "$record" | awk '{print $2}'`
+        local time_in_seconds=`alarm_parse_runtimefield "$time_formatted" | awk '{print $5}'`
+
+        # echo -e "$action $time_formatted $time_in_seconds"
+
+        [ "+" == "$action" ] && \
+            let total_activetime+=time_in_seconds ; let total_activecount+=1
+        [ "-" == "$action" ] && \
+            let total_activetime-=time_in_seconds
+    done <<< "$(echo -e "$records_timeonly")"
+
+    echo -e "$name $total_activetime $total_activecount"
+}
+
+# Parse battery history and make alarm summary
+# Output: Total alarm in battery history
+function battery_analyze_batteryhistory_alarm_summary() {
     local dumpfile="$1"
     # Only time and detail: +12h50m54s334ms +wifi_scan-alarm=u0a124:"*alarm*:com.cctv.yangshipin.app.androidp_KcSdk-Main_action.hb.a.c"
     local batteryhistory_dump=`batterystats_parse_get_batteryhistory_dump "$dumpfile"`
     local batteryhistory_dump_alarm=`echo -e "$batteryhistory_dump" | \
         awk '/alarm=/{printf $1" "; for(i=5; i<=NF; ++i)printf $i;printf "\n"}'`
     unset batteryhistory_dump
+    # Output: 43s352ms   +   alarm     1000       *alarm* TIME_TICK
     local batteryhistory_dump_alarm_formatted=`echo -e "$batteryhistory_dump_alarm" | \
         sed -e 's/^+//g; s/ [+-]/ & /g; s/:/ /g; s/=/ /g' | xargs printf "  %-20s%-4s%-28s%-16s%s\n"`
     unset batteryhistory_dump_alarm
 
-    echo -e "$batteryhistory_dump_alarm_formatted"
+    # echo -e "Timeline Aquire/Release Type Uid Name" | xargs printf "  %-20s%-4s%-16s%-16s%s\n"
+    # echo -e "$batteryhistory_dump_alarm_formatted"
+
+    # Output: *alarm* TIME_TICK
+    local all_names=`echo -e "$batteryhistory_dump_alarm_formatted" | \
+        awk '{$1="";$2="";$3="";$4="";print $0}' | \
+            sed 's/^[ ]*//g; s/[ ]*$//g' | \
+                sort | uniq`
+    # echo -e "$all_names"
+
+    echo -e "$all_names" | while read name; do
+        local name_no_wildcard=`echo -e "$name" | sed 's/\*/\\\*/g'`
+        local records=`echo -e "$batteryhistory_dump_alarm_formatted" | grep -w "$name_no_wildcard"`
+
+: << ExampleOutput
+*alarm* android.intent.action.DATE_CHANGED:
+  3h36m43s355ms       +   alarm                       1000            *alarm* android.intent.action.DATE_CHANGED
+  3h36m44s340ms       -   alarm                       1000            *alarm* android.intent.action.DATE_CHANGED
+*alarm* com.android.server.action.NETWORK_STATS_POLL:
+  7m56s447ms          +   alarm                       1000            *alarm* com.android.server.action.NETWORK_STATS_POLL
+  7m56s505ms          -   alarm                       1000            *alarm* com.android.server.action.NETWORK_STATS_POLL
+ExampleOutput
+        # echo -e "$name:" && echo -e "$records"
+
+        local total_alarm_active=`battery_analyze_batteryhistory_summary_activetime "$records"`
+        echo -e "$total_alarm_active"
+    done
 }
 
 function battery_analyze_summary() {
@@ -77,12 +145,15 @@ function battery_analyze_summary() {
     echo -e "$BATTERY_TOTALWAKES" | sed 's/|/\t/g' | xargs printf "\t%-48s%-8s%s\n"
     printf "]\n"
 
-    local batteryhistory_dump_alarm_formatted=`battery_analyze_batteryhistory_summary "$dumpfile"`
+    local batteryhistory_dump_alarm_summary=`battery_analyze_batteryhistory_alarm_summary "$dumpfile"`
 
     printf "[  Battery Alarm History:\n"
-    # echo -e "$batteryHistory_dump_alarm"
-    echo -e "Timeline Aquire/Release Type Uid Name" | xargs printf "  %-20s%-4s%-16s%-16s%s\n"
-    echo -e "$batteryhistory_dump_alarm_formatted"
+    local battery_alarm_history=`echo -e "$batteryhistory_dump_alarm_summary" | \
+        awk '{count=$NF; time=$(NF-1);$NF="";$(NF-1)="";printf "\t%-80s %-12s %s\n", $0, time, count}'`
+    local battery_alarm_history_sorted=`echo -e "$battery_alarm_history" | \
+        awk '{print $(NF-1)" "$0}' | sort -rgb | cut -f2- -d' '`
+    echo -e "Name Seconds Counts" | xargs printf "\t%-80s%-12s%s\n"
+    echo -e "$battery_alarm_history_sorted"
     printf "]\n"
 
     printf "+ %.0s" {1..50} ; echo

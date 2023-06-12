@@ -55,10 +55,10 @@ function alarm_parse_runtimefield() {
     local timeraw="$1"
 
     local fields=`echo -e "$timeraw" | tr "[+dhms]" '\n' | tac | tr '\n' ' '`
-    local days=`echo -e "$fields" | awk -F' ' '{print $5}'`
-    local hours=`echo -e "$fields" | awk -F' ' '{print $4}'`
-    local mins=`echo -e "$fields" | awk -F' ' '{print $3}'`
-    local secs=`echo -e "$fields" | awk -F' ' '{print $2}'`
+    local days=`echo -e "$fields" | awk -F' ' '{printf "%d", $5}'`
+    local hours=`echo -e "$fields" | awk -F' ' '{printf "%d", $4}'`
+    local mins=`echo -e "$fields" | awk -F' ' '{printf "%d", $3}'`
+    local secs=`echo -e "$fields" | awk -F' ' '{printf "%d", $2}'`
     [[ ! -z "$days" ]] || days=0
     [[ ! -z "$hours" ]] || hours=0
     [[ ! -z "$mins" ]] || mins=0
