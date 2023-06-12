@@ -191,7 +191,7 @@ function battery_analyze_summary() {
 
     printf "[  Current Wake Locks:\n"
     local wakelocks_dump=`batterystats_parse_get_wakelocks_dump "$dumpfile"`
-    echo -e "\t$wakelocks_dump"
+    echo -e "$wakelocks_dump" | awk '{print "\t"$0}'
     unset wakelocks_dump
     printf "]\n"
 
