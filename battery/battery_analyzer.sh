@@ -183,7 +183,7 @@ function battery_analyze_summary() {
 
     printf "[  Total Wake:\n"
     echo -e "Package UID Total" | xargs printf "\t%-48s%-8s%s\n"
-    echo -e "$BATTERY_TOTALWAKES" | sed 's/|/\t/g' | xargs printf "\t%-48s%-8s%s\n"
+    echo -e "$BATTERY_TOTALWAKES" | sed 's/^|/NONE|/g;s/|/\t/g' | xargs printf "\t%-48s%-8s%s\n"
     printf "]\n"
 
     local batteryhistory_dump_alarm_summary=`battery_analyze_batteryhistory_alarm_summary "$dumpfile"`
