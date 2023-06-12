@@ -44,6 +44,9 @@ BATTERY_DRAINRATE               = 3.80
 	com.alibaba.android.rimet                       u0a119  20m52s971ms
 	com.tencent.wemeet.app                          u0a121  1s696ms
 ]
+[  Current Wake Locks:
+    PARTIAL_WAKE_LOCK              '*alarm*' ACQ=-1d1h42m30s741ms LONG (uid=1000 pid=983 ws=WorkSource{10117})
+]
 [  Battery Alarm History:
 	Name                                                                                    Seconds     Time        Counts
 	 com.tencent.android.qqdownloader.action.SCHEDULE_JOB_IN_DAEMON                         1271        21m11s      1
