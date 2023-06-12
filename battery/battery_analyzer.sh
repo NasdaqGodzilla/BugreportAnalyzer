@@ -189,6 +189,12 @@ function battery_analyze_summary() {
     echo -e "$BATTERY_TOTALWAKES" | sed 's/^|/NONE|/g;s/|/\t/g' | xargs printf "\t%-48s%-8s%s\n"
     printf "]\n"
 
+    printf "[  Current Wake Locks:\n"
+    local wakelocks_dump=`batterystats_parse_get_wakelocks_dump "$dumpfile"`
+    echo -e "\t$wakelocks_dump"
+    unset wakelocks_dump
+    printf "]\n"
+
     local batteryhistory_dump_alarm_summary=`battery_analyze_batteryhistory_alarm_summary "$dumpfile"`
 
     printf "[  Battery Alarm History:\n"

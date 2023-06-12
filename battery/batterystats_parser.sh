@@ -135,6 +135,27 @@ function batterystats_parse_get_batteryhistory_dump() {
     echo -e "$batteryhistory_dump"
 }
 
+function batterystats_parse_get_wakelocks_dump() {
+    local dumpfile="$1"
+
+    local line_start=`cat "$dumpfile" | awk '/^Wake Locks: size/{print NR}'`
+    local line_end=`cat "$dumpfile" | awk '/^Suspend Blockers: size/{print NR}'`
+    let line_start+=1
+    let line_end-=2
+
+    # echo batterystats_parse_get_wakelocks_dump LINE_START/END: $line_start/$line_end
+
+    local wakelocks_dump=`sed -n "$line_start,$line_end{p}" "$dumpfile"`
+
+    # Remove prefix whitesapce
+    wakelocks_dump=`echo -e "$wakelocks_dump" | sed 's/^[ ]*//g'`
+
+    echo -e "$wakelocks_dump"
+}
+
+# Input: Batterystats dump; Package dump
+# Output: App total wake
+
 # Input: Batterystats dump; Package dump
 # Output: App total wake
 : << ExampleOutput
