@@ -32,8 +32,7 @@ function battery_analyze() {
 # Statistics of battery history item active time
 # Input: Records that have same name
 : << ExampleInput
-  3h36m43s355ms       +   alarm                       1000            *alarm* android.intent.action.DATE_CHANGED
-  3h36m44s340ms       -   alarm                       1000            *alarm* android.intent.action.DATE_CHANGED
+*alarm* com.tencent.android.qqdownloader_KcSdk-Main_action.ka.cy        28914      8h1m54s      1
 ExampleInput
 # Output: name; total alarm active time in seconds; total alarm counts
 function battery_analyze_batteryhistory_summary_activetime() {
@@ -66,7 +65,9 @@ Output
             let total_activetime-=time_in_seconds
     done <<< "$(echo -e "$records_timeonly")"
 
-    echo -e "$name $total_activetime $total_activecount"
+    local total_activetime_formatted=`time_datetime_fromseconds "$total_activetime" | awk '{print $NF}'`
+
+    echo -e "$name $total_activetime $total_activetime_formatted $total_activecount"
 }
 
 # Parse battery history and make alarm summary
@@ -149,11 +150,11 @@ function battery_analyze_summary() {
 
     printf "[  Battery Alarm History:\n"
     local battery_alarm_history=`echo -e "$batteryhistory_dump_alarm_summary" | \
-        awk '{count=$NF; time=$(NF-1);$NF="";$(NF-1)="";printf "\t%-80s %-12s %s\n", $0, time, count}'`
+        awk '{count=$NF;time=$(NF-2);time_formatted=$(NF-1);$NF="";$(NF-1)="";$(NF-2)="";printf "%-96s%-12s%-12s%s\n", $0, time, time_formatted, count}'`
     local battery_alarm_history_sorted=`echo -e "$battery_alarm_history" | \
-        awk '{print $(NF-1)" "$0}' | sort -rgb | cut -f2- -d' '`
-    echo -e "Name Seconds Counts" | xargs printf "\t%-80s%-12s%s\n"
-    echo -e "$battery_alarm_history_sorted"
+        awk '{print $(NF-1)" "$0}' | sort -rgb | cut -f3- -d' '`
+    echo -e "Name Seconds Time Counts" | xargs printf "\t%-88s%-12s%-12s%s\n"
+    echo -e "$battery_alarm_history_sorted" | awk '{print "\t", $0}'
     printf "]\n"
 
     printf "+ %.0s" {1..50} ; echo
