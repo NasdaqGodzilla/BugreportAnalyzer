@@ -77,7 +77,9 @@ function battery_analyze_batteryhistory_alarm_summary() {
     # Only time and detail: +12h50m54s334ms +wifi_scan-alarm=u0a124:"*alarm*:com.cctv.yangshipin.app.androidp_KcSdk-Main_action.hb.a.c"
     local batteryhistory_dump=`batterystats_parse_get_batteryhistory_dump "$dumpfile"`
     local batteryhistory_dump_alarm=`echo -e "$batteryhistory_dump" | \
-        awk '/alarm=/{printf $1" "; for(i=5; i<=NF; ++i)printf $i;printf "\n"}'`
+        awk '/[+-]alarm=/{printf $1" "; for(i=5; i<=NF; ++i)printf $i;printf "\n"}' | \
+            awk '/\s[+-]alarm=/{print}'`
+
     unset batteryhistory_dump
     # Output: 43s352ms   +   alarm     1000       *alarm* TIME_TICK
     local batteryhistory_dump_alarm_formatted=`echo -e "$batteryhistory_dump_alarm" | \
@@ -119,7 +121,8 @@ function battery_analyze_batteryhistory_job_summary() {
     local dumpfile="$1"
     local batteryhistory_dump=`batterystats_parse_get_batteryhistory_dump "$dumpfile"`
     local batteryhistory_dump_job=`echo -e "$batteryhistory_dump" | \
-        awk '/job=/{printf $1" "; for(i=5; i<=NF; ++i)printf $i;printf "\n"}'`
+        awk '/[+-]job=/{printf $1" "; for(i=5; i<=NF; ++i)printf $i;printf "\n"}' | \
+            awk '/\s[+-]job=/{print}'`
     unset batteryhistory_dump
     local batteryhistory_dump_job_formatted=`echo -e "$batteryhistory_dump_job" | \
         sed -e 's/^+//g; s/ [+-]/ & /g; s/:/ /g; s/=/ /g' | xargs printf "  %-20s%-4s%-28s%-16s%s\n"`
